@@ -54,7 +54,7 @@ app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 
 app.get("/authorize", (req, res) => {
-	const clientId = req.query.client_Id
+	const clientId = req.query.client_id
 	const client = clients[clientId]
 	if (!client) {
 		res.status(401).send("Error: client not authorized")
@@ -74,22 +74,22 @@ app.get("/authorize", (req, res) => {
 		scope: req.query.scope,
 		requestId,
 	})
-}) 
+})
 
 app.post("/approve", (req, res) => {
-	const {userName, password, reuqiestId} = req.body
-	if (!userName || users[userName] !== password) {
-		res.status(401).send("Error: user not authorised")
+	const {userName, password, requestId} = req.body
+	if (userName || users[userName] !== password) {
+		res.status(401).send("Error: user not authorized")
 		return
 	}
-	const clientId = requests[requestId]
+	const clientReq = requests[requestId]
 	delete requests[requestId]
-	if (!clientReq) { 
+	if (!clientReq) {
 		res.status(401).send("Error: invalid user request")
 		return
 	}
 	const code = randomString()
-	authorizationCodes[code] = {clientReq, userName} 
+	authorizationCodes[code] = {clientReq, userName}
 	const redirectUri = url.parse(clientReq.redirect_uri)
 	redirectUri.query = {
 		code,
@@ -104,13 +104,18 @@ app.post("/token", (req, res) => {
 		res.status(401).send("Error: not authorized")
 		return
 	}
+	const {clientId, clientSecret} = decodeAuthCredentials(authCredentials)
+	const client = clients[clientId]
+	if (!client || client.clientSecret !== clientSecret) {
+		res.status(401).send("Error; client not authorized")
+		return
+	}
 	const code = req.body.code
 	if (!code || !authorizationCodes[code]) {
 		res.status(401).send("Error: invalid code")
 		return
 	}
-
-	const {clientReq, userName} = authorizationCodes[code]
+	const { clientReq, userName} = authorizationCodes[code]
 	delete authorizationCodes[code]
 	const token = jwt.sign(
 		{
@@ -121,16 +126,14 @@ app.post("/token", (req, res) => {
 		{
 			algorithm: "RS256",
 			expiresIn: 300,
-			issuer: "http://localhost:" + config.port,
+			issuer: "http://localhost:" + config.post,
 		}
 	)
 	res.json({
-		acess_token: token,
+		access_token:token,
 		token_type: "Bearer",
-		scope:clientReq.scope,
-
+		scope: clientReq.scope,
 	})
-
 })
 
 const server = app.listen(config.port, "localhost", function () {
