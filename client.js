@@ -1,3 +1,4 @@
+const url = require("url")
 const express = require("express")
 const bodyParser = require("body-parser")
 const axios = require("axios").default
@@ -30,7 +31,7 @@ app.get("/authorize", (req, res) => {
 		response_type: "code",
 		client_id: config.clientId,
 		redirect_uri: config.redirectUri,
-		scope: "permission:name permission:data_of_birth",
+		scope: "permission:name permission:date_of_birth",
 		state: state,
 	}
 	res.redirect(url.format(redirectUrl))
@@ -41,7 +42,7 @@ app.get("/callback", (req, res) => {
 		res.status(403).send("Error: state mismatch")
 		return
 	}
-	const {code} = req.query
+	const { code } = req.query
 	axios({
 		method: "POST",
 		url: config.tokenEndpoint,
@@ -54,22 +55,22 @@ app.get("/callback", (req, res) => {
 		},
 		validateStatus: null,
 	})
-	.then((response) => {
-		return axios({
-			method: "GET",
-			url: config.userInfoEndpoint,
-			headers: {
-				authorization: "bearer " + response.data.access_token,
-			},
+		.then((response) => {
+			return axios({
+				method: "GET",
+				url: config.userInfoEndpoint,
+				headers: {
+					authorization: "bearer " + response.data.access_token,
+				},
+			})
 		})
-	})
-	.then((response) => {
-		res.render("welcome", {user: response.data})
-	})
-	.catch((err) => {
-		console.error(err)
-		res.status(500).send("Error: something went wrong")
-	})
+		.then((response) => {
+			res.render("welcome", { user: response.data })
+		})
+		.catch((err) => {
+			console.error(err)
+			res.status(500).send("Error: something went wrong")
+		})
 })
 
 const server = app.listen(config.port, "localhost", function () {
