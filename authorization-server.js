@@ -1,3 +1,4 @@
+const url = require("url")
 const fs = require("fs")
 const express = require("express")
 const bodyParser = require("body-parser")
@@ -8,9 +9,6 @@ const {
 	decodeAuthCredentials,
 	timeout,
 } = require("./utils")
-const { route } = require("express/lib/application")
-const res = require("express/lib/response")
-const { pass } = require("sinon/lib/sinon/mock-expectation")
 
 const config = {
 	port: 9001,
@@ -77,7 +75,7 @@ app.get("/authorize", (req, res) => {
 })
 
 app.post("/approve", (req, res) => {
-	const {userName, password, requestId} = req.body
+	const { userName, password, requestId } = req.body
 	if (!userName || users[userName] !== password) {
 		res.status(401).send("Error: user not authorized")
 		return
@@ -89,7 +87,7 @@ app.post("/approve", (req, res) => {
 		return
 	}
 	const code = randomString()
-	authorizationCodes[code] = {clientReq, userName}
+	authorizationCodes[code] = { clientReq, userName }
 	const redirectUri = url.parse(clientReq.redirect_uri)
 	redirectUri.query = {
 		code,
@@ -104,10 +102,10 @@ app.post("/token", (req, res) => {
 		res.status(401).send("Error: not authorized")
 		return
 	}
-	const {clientId, clientSecret} = decodeAuthCredentials(authCredentials)
+	const { clientId, clientSecret } = decodeAuthCredentials(authCredentials)
 	const client = clients[clientId]
 	if (!client || client.clientSecret !== clientSecret) {
-		res.status(401).send("Error; client not authorized")
+		res.status(401).send("Error: client not authorized")
 		return
 	}
 	const code = req.body.code
@@ -115,7 +113,7 @@ app.post("/token", (req, res) => {
 		res.status(401).send("Error: invalid code")
 		return
 	}
-	const { clientReq, userName} = authorizationCodes[code]
+	const { clientReq, userName } = authorizationCodes[code]
 	delete authorizationCodes[code]
 	const token = jwt.sign(
 		{
@@ -126,11 +124,11 @@ app.post("/token", (req, res) => {
 		{
 			algorithm: "RS256",
 			expiresIn: 300,
-			issuer: "http://localhost:" + config.post,
+			issuer: "http://localhost:" + config.port,
 		}
 	)
 	res.json({
-		access_token:token,
+		access_token: token,
 		token_type: "Bearer",
 		scope: clientReq.scope,
 	})
