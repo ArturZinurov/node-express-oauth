@@ -1,5 +1,6 @@
 const express = require("express")
 const bodyParser = require("body-parser")
+const jwt = require("jsonwebtoken")
 const fs = require("fs")
 const { timeout } = require("./utils")
 
@@ -33,7 +34,8 @@ app.get("/user-info", (req, res) => {
 		res.status(401).send("Error: client unauthorized")
 		return
 	}
-	const authToken = req.headers.authorization.slice("bearer".length)
+
+	const authToken = req.headers.authorization.slice("bearer ".length)
 	let userInfo = null
 	try {
 		userInfo = jwt.verify(authToken, config.publicKey, {
@@ -45,8 +47,9 @@ app.get("/user-info", (req, res) => {
 	}
 	if (!userInfo) {
 		res.status(401).send("Error: client unauthorized")
-		return 
+		return
 	}
+
 	const user = users[userInfo.userName]
 	const userWithRestrictedFields = {}
 	const scope = userInfo.scope.split(" ")
@@ -54,6 +57,7 @@ app.get("/user-info", (req, res) => {
 		const field = scope[i].slice("permission:".length)
 		userWithRestrictedFields[field] = user[field]
 	}
+
 	res.json(userWithRestrictedFields)
 })
 
